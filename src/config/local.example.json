@@ -1,0 +1,38 @@
+{
+  "executionMode": "dry-run",
+  "aliyun": {
+    "region": "cn-hangzhou",
+    "profile": "default",
+    "ossEndpoint": "oss-cn-hangzhou.aliyuncs.com"
+  },
+  "yunxiao": {
+    "domain": "https://devops.aliyun.com",
+    "organizationId": "your-yunxiao-org-id",
+    "tokenEnv": "YUNXIAO_TOKEN"
+  },
+  "flow": {
+    "runnerGroup": "public/cn-hangzhou",
+    "container": "build-steps-public-registry.cn-hangzhou.cr.aliyuncs.com/build-steps/alinux3:latest",
+    "serviceConnectionId": "your-codeup-service-connection-id"
+  },
+  "rds": {
+    "instanceId": "your-test-rds-instance-id",
+    "defaultCharset": "utf8mb4"
+  },
+  "acr": {
+    "instanceId": "your-acr-instance-id",
+    "namespace": "test"
+  },
+  "ecs": {
+    "testInstanceId": "your-test-ecs-instance-id",
+    "appRoot": "/opt/apps",
+    "nginxConfDir": "/etc/nginx/conf.d"
+  },
+  "domain": {
+    "allowedRoot": "example.com"
+  },
+  "ai": {
+    "provider": "local",
+    "model": "gpt-5.2"
+  }
+}

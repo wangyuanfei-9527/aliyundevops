@@ -1,0 +1,12 @@
+node_modules
+.next
+out
+dist
+.env
+.env.local
+src/config/local.json
+data/projects.json
+data/runs
+*.log
+*.tsbuildinfo
+.omx
