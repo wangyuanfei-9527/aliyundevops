@@ -1,12 +1,24 @@
-node_modules
-.next
-out
-dist
+# Keep repository metadata and documentation visible.
+# Runtime/generated data stays local.
+
 .env
-.env.local
-src/config/local.json
-data/projects.json
-data/runs
+.env.*
+!.env.example
+!.env.*.example
+
+node_modules/
+.next/
+dist/
+.tmp/
+.omx/
+
 *.log
 *.tsbuildinfo
-.omx
+
+src/config/local.json
+
+data/terraform/
+data/projects/
+data/logs/
+
+.idea/
