@@ -1,0 +1,18 @@
+resource "alicloud_oss_bucket" "main" {
+  count  = var.oss_bucket != "" ? 1 : 0
+  bucket = var.oss_bucket
+}
+
+resource "alicloud_oss_bucket_acl" "main" {
+  count  = var.oss_bucket != "" ? 1 : 0
+  bucket = alicloud_oss_bucket.main[0].bucket
+  acl    = "public-read"
+}
+
+resource "alicloud_alidns_record" "main" {
+  domain_name = var.root_domain
+  rr          = var.dns_rr
+  type        = "CNAME"
+  value       = "${var.oss_bucket}.${var.oss_endpoint}"
+  ttl         = 600
+}

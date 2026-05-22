@@ -1,0 +1,25 @@
+resource "alicloud_db_database" "main" {
+  count          = var.database_name != "" ? 1 : 0
+  instance_id    = var.rds_instance_id
+  data_base_name = var.database_name
+  character_set  = var.rds_character_set
+  description    = "test database for ${var.project_key}"
+}
+
+resource "alicloud_cr_ee_repo" "main" {
+  count       = var.acr_repo_name != "" ? 1 : 0
+  instance_id = var.acr_instance_id
+  namespace   = var.acr_namespace
+  name        = var.acr_repo_name
+  repo_type   = "PRIVATE"
+  summary     = "${var.project_key} test image repository"
+  detail      = "Auto-created for test environment"
+}
+
+resource "alicloud_alidns_record" "main" {
+  domain_name = var.root_domain
+  rr          = var.dns_rr
+  type        = "A"
+  value       = var.ecs_public_ip
+  ttl         = 600
+}

@@ -1,0 +1,23 @@
+output "dns_record" {
+  value = "${var.dns_rr}.${var.root_domain}"
+}
+
+output "database_name" {
+  value = var.database_name
+}
+
+output "database_instance_id" {
+  value = var.rds_instance_id
+}
+
+output "acr_repo_name" {
+  value = var.acr_repo_name
+}
+
+output "acr_instance_id" {
+  value = var.acr_instance_id
+}
+
+output "oss_bucket" {
+  value = var.oss_bucket
+}

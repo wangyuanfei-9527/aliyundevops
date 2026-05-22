@@ -4,31 +4,64 @@
 
 ## 核心架构
 
-项目按职责严格分层，每层只做自己的事：
+项目采用三阶段流水线架构，每阶段职责明确：
+
+```text
+┌──────────────────────────────────────────────────────────┐
+│ 阶段 1：资源准备                                            │
+│ 输入：group + name + type + domain                         │
+│ 处理：规则推导 → 云效 ensure → Terraform plan/apply         │
+│ 输出：ResourceManifest                                      │
+└──────────────────────────┬───────────────────────────────┘
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────┐
+│ 阶段 2：AI 部署方案                                         │
+│ 输入：仓库代码 + ResourceManifest                           │
+│ 处理：AI 读取代码 → ProjectProfile → DeployPlan             │
+│ 输出：Dockerfile / deploy.sh / Nginx / Pipeline YAML       │
+└──────────────────────────┬───────────────────────────────┘
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────┐
+│ 阶段 3：分步执行                                            │
+│ 输入：用户确认后的 DeployPlan                                │
+│ 处理：白名单步骤执行、实时日志、失败停止、单步重试             │
+│ 输出：部署结果、运行日志                                     │
+└──────────────────────────────────────────────────────────┘
+```
 
 | 层 | 职责 | 技术手段 |
 |---|---|---|
 | 资源准备 | 校验输入、推导资源、创建云效对象、Terraform 管理 | 确定性规则 + Yunxiao API + Terraform |
-| AI 分析 | 读取仓库代码，生成部署方案 | OpenAI-compatible API |
-| 执行 Runner | 白名单步骤执行、实时日志、失败停止、单步重试 | 本项目 Runner + 阿里云云助手 |
-| 本地状态 | 项目记录、运行日志、Redis db 分配、Terraform state | 本地 JSON / JSONL |
+| AI 分析 | 读取仓库代码，生成 ProjectProfile 和 DeployPlan | OpenAI-compatible API (结构化 JSON 输出) |
+| 执行 Runner | 白名单步骤执行、实时日志、失败停止、单步重试 | 17 种 StepType + ECS 云助手 + OSS 适配 |
+| 本地状态 | 项目记录、运行日志、Redis db 分配、Terraform state | 原子写 JSON / JSONL |
 
 Terraform 负责声明式长期资源（OSS Bucket、RDS Database、ACR EE Repository、DNS Record），云效 API 负责代码组/仓库/流水线，AI 只生成可审核的部署方案，Runner 只执行白名单步骤。
 
-详细设计见 `docs/` 目录。
+详细设计见 `docs/devops-automation-v3.md`。
 
 ## 当前状态
 
-项目已完成工程基础设施搭建（A0），包括：
+项目已完成全部模块实现（A0–A11），包括：
 
-- Next.js + TypeScript 项目骨架
-- Vitest 测试框架（unit / integration / fixtures 三级目录）
-- ESLint flat config
-- 统一验证命令 `pnpm verify`
-- API route 占位（全部返回 501）
-- 最小首页
+| 模块 | 内容 | 关键文件 |
+|---|---|---|
+| A0 工程基础 | Next.js + TypeScript 骨架、Vitest、ESLint | `package.json`, `vitest.config.ts` |
+| A1 类型与 Schema | 全局类型定义、Zod 校验 schema、17 种 StepType 白名单 | `src/types.ts`, `src/ai/schemas.ts` |
+| A2 安全工具 | 日志脱敏（8 条规则）、路径安全、安全命令执行 | `src/lib/redact.ts`, `src/lib/paths.ts`, `src/lib/commands.ts` |
+| A3 资源推导 | 确定性资源名推导、ResourceManifest 组装 | `src/resources/derive.ts`, `src/resources/manifest.ts` |
+| A4 Terraform | 模板渲染、init/plan/apply 执行、输出解析 | `src/terraform/executor.ts`, `src/terraform/renderer.ts` |
+| A5 存储 | 项目 CRUD、运行日志 JSONL、Redis db 分配（原子写） | `src/storage/projects.ts`, `src/storage/logs.ts` |
+| A6 云效适配 | IYunxiaoAdapter 接口、HTTP 实现、内存 Mock | `src/lib/yunxiao.ts` |
+| A7 AI | LLM Provider、仓库分析器、部署方案生成器 | `src/ai/llmProvider.ts`, `src/ai/analyzer.ts`, `src/ai/planner.ts` |
+| A8 Runner | StepRegistry、17 个步骤执行器、runProject 编排 | `src/runner/runProject.ts`, `src/runner/stepRegistry.ts` |
+| A9 API | 7 个 POST 路由处理器（derive/plan/apply/analyze/deploy-plan/runs/runs/step） | `app/api/` |
+| A10 UI | 向导式控制台（8 步流程）、CSS 设计系统 | `app/page.tsx`, `src/components/ProjectConsole.tsx` |
+| A11 QA | 安全回归测试、Mock 端到端集成测试 | `tests/integration/` |
 
-业务模块尚未填充，后续将按 `docs/ai-autonomous-implementation-plan.md` 中的里程碑逐步实现。
+测试覆盖：370+ 测试用例，覆盖单元/集成/安全回归三个层级。
 
 ## 安装和启动
 
@@ -54,7 +87,7 @@ pnpm lint          # ESLint 检查
 pnpm typecheck     # TypeScript 类型检查
 pnpm test          # 运行全部测试
 pnpm test:unit     # 单元测试
-pnpm test:integration  # 集成测试
+pnpm test:integration  # 集成测试（含安全回归 + Mock E2E）
 pnpm test:fixtures     # Fixture 测试
 pnpm build         # Next.js 生产构建
 ```
@@ -75,10 +108,12 @@ src/
   terraform/    # Terraform 模板渲染、执行、输出解析
   ai/           # AI 分析器、部署方案生成器、schema 校验
   runner/       # 白名单步骤注册与执行编排
-  config/       # 配置加载与发现
-  lib/          # 通用工具（命名、模板渲染、云效适配等）
+    steps/      # 17 个步骤执行器（codeup/ecs/oss/flow/acr/rds）
+  config/       # 配置加载（环境变量 + local.json）
+  lib/          # 通用工具（命名、路径安全、日志脱敏、云效适配等）
   storage/      # 项目记录、日志、Redis db 分配
-  types.ts      # 全局类型定义
+  types.ts      # 全局类型定义（17 种 StepType 白名单）
+  components/   # React 组件（ProjectConsole）
 
 templates/
   terraform/    # HCL 模板
@@ -86,7 +121,7 @@ templates/
 
 tests/
   unit/         # 单元测试
-  integration/  # 集成测试
+  integration/  # 集成测试（安全回归 + Mock E2E）
   fixtures/     # Fixture 测试
 
 docs/           # 设计文档
@@ -111,12 +146,24 @@ cp .env.dev.example .env.dev
 
 ## 安全边界
 
-- AI 只生成结构化方案，不直接执行任意 shell。
-- Runner 只接受 `src/ai/schemas.ts` 中声明的白名单步骤。
-- Terraform 不提供 destroy，不自动删除云资源。
-- 不记录密钥、token、AccessKey、密码或完整连接串。
-- 所有创建操作默认面向测试环境，不引入生产环境行为。
-- 缺少真实配置或凭据时直接失败，不返回模拟成功。
+- **白名单步骤**：Runner 只接受 `STEP_TYPES` 中声明的 17 种步骤类型，任意 shell 执行被拒绝。
+- **授权门控**：terraform apply 和部署执行需要请求体显式传入 `authorized: true`。
+- **日志脱敏**：所有日志写入前经过 8 条正则规则过滤（AccessKey、密码、Token、连接串等）。
+- **路径安全**：所有文件路径经过 traversal 检测，文件名经过 sanitize。
+- **不删除资源**：Terraform 不提供 destroy，不自动删除云资源。
+- **不记录密钥**：不保存 AccessKey、Token、密码或完整数据库连接串。
+- **不模拟成功**：缺少真实配置或凭据时直接失败。
+
+## Runner 步骤类型（17 种）
+
+| 阶段 | 步骤类型 |
+|---|---|
+| 云效资源 | `ensureCodeGroup`, `ensureRepository` |
+| Terraform | `terraformInit`, `terraformPlan`, `terraformApply` |
+| 代码提交 | `commitDockerfile`, `commitDockerCompose`, `commitDeployScript`, `commitBuildConfig` |
+| ECS 部署 | `writeDeployScript`, `deployToEcs`, `writeNginxConfig`, `reloadNginx` |
+| OSS / 健康检查 | `configureOssWebsite`, `healthCheck` |
+| 流水线 | `createFrontendPipeline`, `createBackendPipeline` |
 
 ## 多 AI 协作
 

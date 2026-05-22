@@ -3,10 +3,11 @@ import { describe, expect, it } from "vitest";
 import HomePage from "../../app/page";
 
 describe("HomePage", () => {
-  it("renders the foundation console heading", () => {
+  it("renders the console heading and wizard step bar", () => {
     render(<HomePage />);
 
-    expect(screen.getByRole("heading", { name: "阿里云测试环境自动化控制台" })).toBeInTheDocument();
-    expect(screen.getByText("默认不触达真实云资源")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "阿里云测试环境控制台" })).toBeInTheDocument();
+    expect(screen.getByText("项目信息")).toBeInTheDocument();
+    expect(screen.getByText("资源推导")).toBeInTheDocument();
   });
 });

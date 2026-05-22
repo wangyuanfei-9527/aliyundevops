@@ -1,0 +1,60 @@
+variable "region" {
+  type = string
+}
+
+variable "project_key" {
+  type = string
+}
+
+variable "root_domain" {
+  type = string
+}
+
+variable "dns_rr" {
+  type = string
+}
+
+variable "ecs_public_ip" {
+  type    = string
+  default = ""
+}
+
+variable "oss_endpoint" {
+  type    = string
+  default = ""
+}
+
+variable "rds_instance_id" {
+  type    = string
+  default = ""
+}
+
+variable "rds_character_set" {
+  type    = string
+  default = "utf8mb4"
+}
+
+variable "database_name" {
+  type    = string
+  default = ""
+}
+
+variable "acr_instance_id" {
+  type    = string
+  default = ""
+}
+
+variable "acr_namespace" {
+  type    = string
+  default = ""
+}
+
+variable "acr_repo_name" {
+  type    = string
+  default = ""
+}
+
+variable "oss_bucket" {
+  type    = string
+  default = ""
+}
